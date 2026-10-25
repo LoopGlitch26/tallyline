@@ -89,6 +89,10 @@ export function PersonDrawer({ uid, onClose }: { uid: string | null; onClose: ()
             {p.visits.map((v) => {
               const hits = [...(hitsByVisit.get(v.vsn) ?? [])].reverse();
               const paid = p.charges.filter((c) => c.at >= v.began && c.at <= v.last_active + 30 * 60_000);
+              // one list in time order; on a tie the hit (a checkout click) stays before the payment it led to
+              const rows = [...hits.map((h) => ({ at: h.at, h })), ...paid.map((c) => ({ at: c.at, c }))].sort(
+                (a, b) => a.at - b.at,
+              );
               return (
                 <li>
                   <div class="visit-head">
@@ -102,26 +106,27 @@ export function PersonDrawer({ uid, onClose }: { uid: string | null; onClose: ()
                     <span class="muted">{duration(v.engaged_ms)}</span>
                   </div>
                   <ul class="hits">
-                    {hits.map((h) => (
-                      <li>
-                        <time>{clock(h.at, property.tz)}</time>
-                        {h.kind === 'view' && <span>📄 {h.path}</span>}
-                        {h.kind === 'conversion' && (
-                          <span class="goal">
-                            ◎ {h.label} <span class="muted">on {h.path}</span>
+                    {rows.map((r) =>
+                      'h' in r ? (
+                        <li>
+                          <time>{clock(r.h.at, property.tz)}</time>
+                          {r.h.kind === 'view' && <span>📄 {r.h.path}</span>}
+                          {r.h.kind === 'conversion' && (
+                            <span class="goal">
+                              ◎ {r.h.label} <span class="muted">on {r.h.path}</span>
+                            </span>
+                          )}
+                          {r.h.kind === 'exit' && <span class="muted">↗ left for {r.h.label?.replace(/^https?:\/\//, '')}</span>}
+                        </li>
+                      ) : (
+                        <li>
+                          <time>{clock(r.c.at, property.tz)}</time>
+                          <span class="money strong">
+                            {r.c.kind === 'refund' ? '↩ Refunded' : '● Paid'} {cash(r.c.amount_minor)}
                           </span>
-                        )}
-                        {h.kind === 'exit' && <span class="muted">↗ left for {h.label?.replace(/^https?:\/\//, '')}</span>}
-                      </li>
-                    ))}
-                    {paid.map((c) => (
-                      <li>
-                        <time>{clock(c.at, property.tz)}</time>
-                        <span class="money strong">
-                          {c.kind === 'refund' ? '↩ Refunded' : '● Paid'} {cash(c.amount_minor)}
-                        </span>
-                      </li>
-                    ))}
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </li>
               );
