@@ -4,7 +4,7 @@
 
 # Tallyline
 
-**Self-hosted web analytics that shows which source made you money.**
+**Open-source web analytics that shows revenue next to traffic.**
 
 See where every visitor came from (a tweet, a Google page, ChatGPT, a newsletter), what they did, and which visits turned into payments.
 Runs on Cloudflare's free plan. Your data stays in your own account.

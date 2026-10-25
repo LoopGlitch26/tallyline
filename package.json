@@ -2,7 +2,7 @@
   "name": "tallyline",
   "version": "1.0.0",
   "private": true,
-  "description": "Self-hosted, revenue-aware web analytics that runs on Cloudflare's free tier.",
+  "description": "Open-source web analytics that shows revenue next to traffic: which tweet, Google search, newsletter or AI chat (ChatGPT, Claude, Perplexity) brought each paying customer. Goals, funnels and full buyer journeys, self-hosted free on Cloudflare Workers and D1.",
   "license": "MIT",
   "type": "module",
   "scripts": {
