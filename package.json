@@ -1,0 +1,30 @@
+{
+  "name": "tallyline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted, revenue-aware web analytics that runs on Cloudflare's free tier.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "dev:ui": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate:local": "wrangler d1 migrations apply tallyline --local",
+    "migrate:remote": "wrangler d1 migrations apply tallyline --remote",
+    "deploy": "vite build && wrangler d1 migrations apply tallyline --remote && wrangler deploy",
+    "demo-data": "node scripts/demo-data.mjs && wrangler d1 execute tallyline --local --file .wrangler/demo.sql",
+    "e2e": "node scripts/e2e.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261025.1",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.5",
+    "preact": "^11.0.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.152.0"
+  }
+}

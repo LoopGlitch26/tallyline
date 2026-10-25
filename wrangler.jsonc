@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tallyline",
+  "main": "src/server/main.ts",
+  "compatibility_date": "2025-10-01",
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "STATIC",
+    "not_found_handling": "single-page-application",
+    // The Worker only runs for /api/*. The dashboard and /t.js are served as static files (free, uncounted).
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tallyline",
+      // Paste the id printed by `npx wrangler d1 create tallyline` here.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

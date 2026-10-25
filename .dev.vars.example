@@ -1,0 +1,2 @@
+DASHBOARD_PASSWORD=letmein
+COOKIE_SECRET=replace-with-a-long-random-string
