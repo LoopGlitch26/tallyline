@@ -1,12 +1,22 @@
 export function Wordmark() {
   return (
     <div class="wordmark">
-      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="8" fill="var(--ink)" />
-        <path d="M8 22 L13 15 L18 18 L24 9" fill="none" stroke="var(--visitors)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
-        <rect x="8" y="24" width="4" height="2" rx="1" fill="var(--revenue)" />
-        <rect x="14" y="23" width="4" height="3" rx="1" fill="var(--revenue)" />
-        <rect x="20" y="21" width="4" height="5" rx="1" fill="var(--revenue)" />
+      <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <linearGradient id="wm-metal" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7ea6f7" />
+            <stop offset="0.45" stop-color="#2f62d6" />
+            <stop offset="1" stop-color="#132e66" />
+          </linearGradient>
+          <linearGradient id="wm-shine" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff" stop-opacity="0.55" />
+            <stop offset="0.5" stop-color="#fff" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <rect width="32" height="32" rx="9" fill="url(#wm-metal)" />
+        <rect x="1" y="1" width="30" height="15" rx="8" fill="url(#wm-shine)" />
+        <path d="M7.5 21.5 L13 15 L17.5 18 L24.5 9.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="24.5" cy="9.5" r="2.2" fill="#7ff0ff" />
       </svg>
       <span>Tallyline</span>
     </div>

@@ -1,95 +1,151 @@
+<div align="center">
+
+<img src="docs/logo.svg" width="64" height="64" alt="Tallyline logo" />
+
 # Tallyline
 
-Self-hosted web analytics that shows **which source made you money**, not just which one sent traffic. See where visitors came from (a specific tweet, a Google page, ChatGPT, a newsletter), what they did, and which visits turned into payments. Runs on Cloudflare's free plan; your data stays in your own account.
+**Self-hosted web analytics that shows which source made you money.**
 
-![Dashboard](docs/dashboard.png)
+See where every visitor came from (a tweet, a Google page, ChatGPT, a newsletter), what they did, and which visits turned into payments.
+Runs on Cloudflare's free plan. Your data stays in your own account.
+
+[Features](#features) · [How it works](#how-it-works) · [Deploy in 10 minutes](#deploy-free-in-about-10-minutes) · [Add to your site](#add-it-to-a-website) · [Revenue](#revenue-attribution)
+
+<br />
+
+![Tallyline walkthrough](docs/demo.gif)
+
+<sub>A 30-second tour with sample data. <a href="docs/demo.mp4">Watch the MP4</a>.</sub>
+
+</div>
+
+---
+
+## Why Tallyline
+
+Most analytics tools tell you that 2,000 people came from X last month. They don't tell you that those visitors paid you $1,400, while 3,000 visitors from Google paid $300.
+
+Tallyline connects each payment to the visit that earned it, so every source, campaign, page and goal shows **revenue next to traffic**.
+
+| | Google Analytics | Plausible / Umami | Paid revenue analytics | **Tallyline** |
+| --- | :---: | :---: | :---: | :---: |
+| Simple, privacy-friendly | | ✓ | ✓ | ✓ |
+| Revenue per source and campaign | complex setup | | ✓ | ✓ |
+| Full buyer journey per customer | | | ✓ | ✓ |
+| AI assistants as a traffic source | | partial | ✓ | ✓ |
+| Self-hosted, data in your account | | ✓ | | ✓ |
+| Price | free (your data is the price) | paid or self-host | monthly fee | **free** |
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screens/overview.png" alt="Overview with metric tiles and comparison chart" /><br /><b>Overview</b>: six headline metrics with sparklines. Click one to chart it against the previous period.</td>
+    <td width="50%"><img src="docs/screens/revenue.png" alt="Revenue view" /><br /><b>Revenue</b>: every payment, the source credited, and how each payment was matched to its buyer.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screens/visitor.png" alt="Visitor timeline" /><br /><b>Visitor timeline</b>: each visit, page, goal, outbound click and payment in order.</td>
+    <td><img src="docs/screens/acquisition.png" alt="Acquisition view" /><br /><b>Acquisition</b>: channels, sources, campaigns, ref tags and locations, with revenue on every row.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screens/funnels.png" alt="Funnels" /><br /><b>Funnels</b>: page and goal steps with drop-off per step.</td>
+    <td><img src="docs/screens/palette.png" alt="Command palette" /><br /><b>⌘K</b>: jump to any view, change the date range or filter by a top source from the keyboard.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screens/dark.png" alt="Dark mode" /><br /><b>Dark mode</b> follows your system setting.</td>
+    <td align="center"><img src="docs/screens/mobile.png" width="260" alt="Phone layout" /><br /><b>Works on your phone</b>.</td>
+  </tr>
+</table>
 
 ## Features
 
-**Numbers at the top** — visitors, revenue, conversion rate, revenue per visitor, bounce rate, visit duration, people online now. Each shows the change against the previous period of the same length.
+**Dashboard**
+- Net revenue, visitors, conversion rate, revenue per visitor, bounce rate and visit time, each with % change and a sparkline
+- Trend chart for any of those metrics, with the previous period as a dashed line and a hover tooltip comparing both
+- Date ranges from the last 24 hours to all time, custom dates, and buttons to step back and forward
+- Hourly, daily, weekly or monthly buckets in your website's time zone
+- People online right now
 
-**Chart** — visitors as a line and revenue as bars, by hour, day, week or month. Click the Visitors / Revenue numbers to show or hide them.
+**Where visitors come from**
+- Channels: Direct, Search, Social, AI, Referral, Email, Paid
+- Sources, including Google, X, Reddit, Hacker News, Product Hunt and AI assistants (ChatGPT, Claude, Perplexity, Gemini, Copilot, DeepSeek, Grok)
+- Campaigns (`utm_campaign`), keywords (`utm_term`), UTM source/medium/content, `?ref=` tags and full referrer pages
+- Country, region and city
 
-**Date ranges** — today, yesterday, last 24 / 48 hours, 7 / 30 / 90 days, 12 months, all time, or custom dates. ‹ and › move the whole window back and forward.
+**What they do**
+- Visited, landing and exit pages, outbound links, hostnames
+- Goals from button clicks or code, with conversion rate and revenue
+- Funnels with page steps (`*` wildcards) and goal steps
+- Device, browser and operating system
 
-**Breakdowns** (each row shows visitors and revenue; sort by either)
-- Where they came from: channel (Direct, Search, Social, AI, Referral, Email, Paid), source, campaign (`utm_campaign`), keyword (`utm_term`), ref tag (`?ref=`)
-- Where they are: country, region, city
-- What they looked at: visited pages, landing pages, exit pages, outbound links, hostnames
-- What they used: device, browser, OS
+**Who paid**
+- Every payment with the buyer, credited source, amount, time to buy and number of visits
+- A complete timeline for every visitor
+- Name and email from `identify()` or from the payment
 
-**Filters** — click any row and the whole dashboard narrows to it (e.g. only visitors from your launch thread). Filters stack and live in the URL, so a link keeps them.
+**Easy to use**
+- Click any row to filter every view by it; filters stack and stay in the URL
+- ⌘K command palette
+- Several websites under one login
+- A ready-made prompt that lets Claude Code or Cursor install everything in your codebase
 
-**Conversions**
-- **Revenue journey** — every payment with the buyer, the source credited, the amount, how long they took to buy and how many visits it took
-- **Goals** — button clicks and custom events with conversion rate and revenue
-- **Funnels** — ordered steps of pages (with `*` wildcards) and goals, with drop-off per step
-- **People** — recent visitors with visits, pages, time on site and money spent
-- **Visitor timeline** — click anyone to see each visit, page, goal, outbound click and payment in order
+## How it works
 
-![Visitor timeline](docs/visitor.png)
+```mermaid
+flowchart LR
+  A["Your website<br/>t.js tracker (4 KB)"] -- "page views, goals,<br/>outbound clicks" --> W["Tallyline Worker<br/>(Cloudflare)"]
+  P["Dodo Payments<br/>or any provider"] -- "signed webhook /<br/>payments API" --> W
+  W --> D[("D1 database<br/>(SQLite)")]
+  D --> UI["Dashboard"]
+  W -. "matches each payment<br/>to the visit that earned it" .-> D
+```
 
-**Setup page** — copy-paste snippet, a ready-made prompt for your coding assistant (Claude Code, Cursor…), Dodo Payments connection, server-side API, campaign link builder.
+1. The tracker sets two first-party cookies: `tl_uid` (the browser) and `tl_vsn` (the current visit, 30 minutes of inactivity ends it).
+2. Each visit records where it came from: referrer, UTM tags, `?ref=`, location and device.
+3. When a payment arrives, Tallyline finds the browser that paid and **credits the last visit that came from a real source**. Someone who clicks your tweet, comes back by typing your URL two weeks later and pays is credited to the tweet.
+4. Every report can then show revenue and customers next to visitors.
 
-Multiple websites, one login.
-
-## Deploy (about 10 minutes, free)
+## Deploy free in about 10 minutes
 
 You need a free [Cloudflare account](https://dash.cloudflare.com/sign-up), [Node.js 20+](https://nodejs.org) and Git.
 
-**1. Get the code and sign in to Cloudflare**
-
 ```bash
-git clone <your-repo-url> tallyline
+# 1. Get the code and sign in to Cloudflare
+git clone https://github.com/LoopGlitch26/tallyline.git
 cd tallyline
 npm install
 npx wrangler login
-```
 
-**2. Create the database**
-
-```bash
+# 2. Create the database
 npx wrangler d1 create tallyline
-```
+#    Copy the printed database_id into wrangler.jsonc (replace 00000000-...).
+#    If Wrangler offers to add it to your config for you, answer No.
 
-If Wrangler offers to add it to your config for you, say **No**. Copy the printed `database_id` into `wrangler.jsonc` in place of `00000000-0000-0000-0000-000000000000`. Keep exactly one entry under `d1_databases`, with `"binding": "DB"`.
+# 3. Set your dashboard password and a cookie secret
+npx wrangler secret put DASHBOARD_PASSWORD   # what you'll type to sign in
+npx wrangler secret put COOKIE_SECRET        # any long random text: openssl rand -hex 32
 
-**3. Set the dashboard password and the cookie secret**
-
-```bash
-npx wrangler secret put DASHBOARD_PASSWORD   # what you'll type to log in; make it strong
-npx wrangler secret put COOKIE_SECRET        # any long random text, e.g. from: openssl rand -hex 32
-```
-
-If asked whether to create the Worker `tallyline`, say **Yes**.
-
-**4. Deploy**
-
-```bash
+# 4. Deploy
 npm run deploy
 ```
 
-This builds the dashboard, creates the tables and deploys. It prints your address, e.g. `https://tallyline.<you>.workers.dev`. Open it, sign in, add a website and copy its snippet.
+The last command prints your address, for example `https://tallyline.<you>.workers.dev`. Open it, sign in, add a website and copy its snippet. You can attach your own domain (such as `stats.yourdomain.com`) in Cloudflare → Workers & Pages → tallyline → Settings → Domains & Routes.
 
-You can put it on your own domain (e.g. `stats.yourdomain.com`) in Cloudflare → Workers & Pages → tallyline → Settings → Domains & Routes.
+**Updating later:** `git stash && git pull && git stash pop && npm run deploy` (the stash keeps your `database_id` edit).
 
-**Updating later**
-
-```bash
-git stash && git pull && git stash pop   # keeps your database_id edit
-npm run deploy
-```
-
-### What the free plan covers
+<details>
+<summary>What the free plan covers</summary>
 
 | Cloudflare free limit | In practice |
 | --- | --- |
-| 100,000 Worker requests / day | ~100k tracked events a day across all sites. The tracker script and dashboard files are static and don't count. |
-| 100,000 D1 rows written / day | ~10–15k page views a day |
+| 100,000 Worker requests / day | About 100k tracked events a day across all sites. The tracker and dashboard files are static and don't count. |
+| 100,000 D1 rows written / day | About 10–15k page views a day |
 | 5M D1 rows read / day | Hundreds of dashboard loads a day at side-project traffic |
 | 5 GB D1 storage | Years of data for most small sites |
 
-At 5–10k visitors a month you'll use a few percent of this. Cloudflare's paid Workers plan is $5/month if you outgrow it.
+At 5–10k visitors a month you use a few percent of this. Cloudflare's paid Workers plan is $5/month if you outgrow it.
+
+</details>
 
 ## Add it to a website
 
@@ -97,31 +153,32 @@ At 5–10k visitors a month you'll use a few percent of this. Cloudflare's paid 
 <script defer data-site="PROPERTY_ID" src="https://YOUR-TALLYLINE/t.js"></script>
 ```
 
-- **Goals:** `<button data-tally="signup_click">`, extra details with `data-tally-plan="pro"`, or from code `tally('event', 'signup', { plan: 'pro' })`
-- **Signed-in users:** `tally('identify', { user_id, email, name })`
-- **Skip your own visits:** open `https://yoursite.com/?tally_off=1` once per browser (`?tally_off=0` to undo)
-- **Single-page apps** (Next.js, React Router, Vue…) are tracked automatically
-- **Subdomains** share one visitor: the cookie is set on the root domain
-- **Outbound links** are recorded automatically
-- Query parameters that may hold personal data (`email`, `name`, `token`, `code`, …) are removed in the browser before anything is sent
+| What | How |
+| --- | --- |
+| Goals without code | `<button data-tally="signup_click" data-tally-plan="pro">` |
+| Goals from code | `tally('event', 'signup_completed', { plan: 'pro' })` |
+| Signed-in users | `tally('identify', { user_id, email, name })` |
+| Skip your own visits | Open `https://yoursite.com/?tally_off=1` once per browser (`?tally_off=0` to undo) |
+| Test on localhost | Add `data-allow-local` to the script tag |
+| Proxy through your domain | `data-endpoint="/tl/collect"` (the setup page shows the rewrite) |
 
-Script tag options: `data-endpoint` (send to a proxied path), `data-cookie-domain` (force the cookie domain), `data-allow-local` (track on localhost while testing).
+Single-page apps are tracked automatically. Subdomains share one visitor. Query parameters that may hold personal data (`email`, `name`, `token`, `code` and similar) are removed in the browser before anything is sent.
 
 ### Tag your posts
 
-X, LinkedIn, Medium and others only reveal the site (`t.co`, `medium.com`), not the exact post. Tag the link in each post; the setup page has a builder:
+X, LinkedIn and Medium only reveal the site, not the exact post. Tag the link in each post (the setup page has a builder) and it shows up by name, with its revenue:
 
 ```
 https://yoursite.com/?utm_source=x&utm_medium=social&utm_campaign=launch-thread
 https://yoursite.com/?ref=launch-thread
 ```
 
-Google doesn't share search terms, but **Landing page** filtered to the **Google** source tells you which article people found.
+## Revenue attribution
 
-## Revenue with Dodo Payments
+### Dodo Payments
 
 1. In Dodo → Developer → Webhooks, add `https://YOUR-TALLYLINE/api/hooks/dodo/PROPERTY_ID`, subscribe to `payment.succeeded` and `refund.succeeded`, and paste the signing secret (`whsec_…`) on the setup page.
-2. Put the visitor cookies into the checkout metadata:
+2. Pass the visitor cookies into the checkout metadata:
 
 ```ts
 const jar = await cookies(); // next/headers
@@ -132,15 +189,13 @@ await dodo.checkoutSessions.create({
 });
 ```
 
-Using Dodo payment links? The tracker adds `metadata_tl_uid` / `metadata_tl_vsn` to every `checkout.dodopayments.com` link on the page. In the browser, `tally.ids()` returns both ids.
+Using Dodo payment links? The tracker adds the metadata to every `checkout.dodopayments.com` link on the page. In the browser, `tally.ids()` returns both ids.
 
-3. Recommended: send buyers back to a page on your site that loads the tracker (the return / redirect URL). Dodo appends `?payment_id=…`, and Tallyline uses it to match the payment to the buyer even if metadata got lost.
+3. Recommended: send buyers back to a page on your site that loads the tracker. Dodo appends `?payment_id=…`, which links the payment to the buyer even if metadata got lost.
 
-**Who gets credit:** the buyer's most recent visit that came from a real source (last non-direct touch). Clicked your tweet, came back by typing the URL two weeks later, paid → the tweet gets the revenue.
+**When metadata is missing**, Tallyline tries, in order: the return page, an earlier payment by the same customer, an email you passed to `identify`, and finally checkout timing (used only when exactly one visitor clicked checkout in the 3 hours before the payment). The Revenue view shows how each payment was matched. **Try matching again** re-runs it for unlinked payments and explains each result. Refunds are subtracted.
 
-**When metadata is missing**, Tallyline tries, in order: the return page, an earlier payment by the same customer (renewals and repeat purchases), an email you passed to `identify`, and finally checkout timing — used only when exactly one visitor clicked a Dodo checkout link (or a checkout/buy/purchase goal) in the 3 hours before the payment. The revenue journey shows how each payment was matched, and **Try matching again** re-runs this for unlinked payments and explains the result. Refunds are subtracted from revenue.
-
-### Any other payment provider
+### Any other provider
 
 ```bash
 curl -X POST https://YOUR-TALLYLINE/api/v1/payment \
@@ -152,15 +207,15 @@ curl -X POST https://YOUR-TALLYLINE/api/v1/conversion \
   -d '{"uid":"<tl_uid cookie>","name":"signup_completed"}'
 ```
 
-Add `"refund": true` to record a refund, `"renewal": true` for a renewal. The key is on the setup page (and can be rotated).
+Add `"refund": true` for a refund or `"renewal": true` for a renewal. The API key is on the setup page and can be replaced at any time.
 
 ## Accuracy notes
 
-- **Ad blockers** block some analytics hosts. Proxy `t.js` and `/api/collect` through your own domain (the setup page shows a Next.js rewrite). Payments arrive by webhook, so they're recorded even when the buyer's browser blocked tracking.
+- **Ad blockers** block some analytics hosts. Proxy `t.js` and `/api/collect` through your own domain. Payments arrive by webhook, so they're recorded even when the buyer's browser blocked tracking.
 - **Safari** keeps script-set cookies for 7 days, so a Safari visitor returning after a week counts as new. The email fallback recovers most of their payments.
-- **Bots** are filtered by user agent and by the browser's `navigator.webdriver` flag.
+- **Bots** are filtered by user agent and the browser's `navigator.webdriver` flag.
 - **Currencies:** a payment in another currency is converted only when Dodo reports a settlement amount in the website's currency.
-- **Geography** comes from Cloudflare. If you proxy through Vercel, its `x-vercel-ip-*` headers are used instead; other proxies can forward `x-tallyline-country` / `-region` / `-city`.
+- **Location** comes from Cloudflare. Behind Vercel, its `x-vercel-ip-*` headers are used; other proxies can forward `x-tallyline-country` / `-region` / `-city`.
 
 ## Local development
 
@@ -168,21 +223,25 @@ Add `"refund": true` to record a refund, `"renewal": true` for a renewal. The ke
 cp .dev.vars.example .dev.vars      # password: letmein
 npm run migrate:local
 npm run build && npm run dev        # http://localhost:8787
-npm run dev:ui                      # optional: hot-reloading dashboard on http://localhost:5173
+npm run dev:ui                      # optional: hot-reloading dashboard on :5173
 
-npm run demo-data                   # optional: 30 days of sample data (open /p/demoinkpad)
+npm run demo-data                   # optional: sample data, open /p/demoinkpad
 npm test                            # unit tests
-npm run e2e                         # end-to-end checks against the running dev server
+npm run e2e                         # end-to-end checks against the dev server
+npm run demo                        # single-file demo: server + dashboard + SQLite in the browser
 ```
 
-## How it's built
+## Project layout
 
-- `public/t.js` — the tracker, no dependencies (~4 KB gzipped)
-- `src/server` — the Cloudflare Worker: a small router, beacon ingest, attribution, Dodo webhook and API, reports on D1 (SQLite)
-- `src/common` — the traffic source catalogue shared by server and dashboard
-- `src/web` — the dashboard (Preact + Vite, hand-drawn SVG chart, plain CSS with light and dark themes), served as static files by the same Worker
-- `migrations/` — database schema
+| Path | What it is |
+| --- | --- |
+| `public/t.js` | The tracker, no dependencies (about 4 KB gzipped) |
+| `src/server` | The Cloudflare Worker: router, ingest, attribution, Dodo webhook and API, reports on D1 |
+| `src/common` | Traffic source catalogue shared by server and dashboard |
+| `src/web` | The dashboard (Preact + Vite, hand-drawn SVG charts, plain CSS, light and dark themes) |
+| `src/demo` | In-browser demo that runs the real Worker against SQLite compiled to JavaScript |
+| `migrations/` | Database schema |
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE)

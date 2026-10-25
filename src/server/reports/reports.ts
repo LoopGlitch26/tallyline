@@ -57,17 +57,71 @@ function shapeTotals(t: Row, m: Row): Totals {
   };
 }
 
+export interface Point {
+  key: string;
+  visitors: number;
+  views: number;
+  visits: number;
+  bounces: number;
+  engagedMs: number;
+  revenue: number;
+  payments: number;
+  customers: number;
+}
+
+/** Per-bucket numbers for one window, with every bucket present (zeros where nothing happened). */
+function seriesQueries(s: Scope, start: number, end: number): [D1PreparedStatement, D1PreparedStatement] {
+  const v = s.visits(start, end);
+  const c = s.charges(start, end);
+  const vb = bucketExpr('v.began', s.period.step, s.offset);
+  const cb = bucketExpr('c.at', s.period.step, s.offset);
+  return [
+    s.db
+      .prepare(
+        `SELECT ${vb} AS k, COUNT(DISTINCT v.uid) AS visitors, SUM(v.views) AS views, COUNT(*) AS visits,
+                SUM(v.views <= 1 AND v.conversions = 0) AS bounces, SUM(v.engaged_ms) AS engaged
+         FROM visits v WHERE ${v.sql} GROUP BY 1`,
+      )
+      .bind(...v.args),
+    s.db
+      .prepare(
+        `SELECT ${cb} AS k, SUM(c.amount_minor) AS revenue, SUM(c.kind = 'charge') AS payments,
+                COUNT(DISTINCT CASE WHEN c.kind = 'charge' AND c.recurring = 0 THEN COALESCE(c.uid, c.id) END) AS customers
+         FROM ${c.sql} GROUP BY 1`,
+      )
+      .bind(...c.args),
+  ];
+}
+
+function shapeSeries(keys: string[], vs: Row[], cs: Row[]): Point[] {
+  const vBy = new Map(vs.map((r) => [r.k, r]));
+  const cBy = new Map(cs.map((r) => [r.k, r]));
+  return keys.map((k) => {
+    const a = vBy.get(k);
+    const b = cBy.get(k);
+    return {
+      key: k,
+      visitors: a?.visitors ?? 0,
+      views: a?.views ?? 0,
+      visits: a?.visits ?? 0,
+      bounces: a?.bounces ?? 0,
+      engagedMs: a?.engaged ?? 0,
+      revenue: b?.revenue ?? 0,
+      payments: b?.payments ?? 0,
+      customers: b?.customers ?? 0,
+    };
+  });
+}
+
 export async function summary(s: Scope) {
   const { db, period, property } = s;
   const prev = previousPeriod(period);
   const now = Date.now();
-  const v = s.visits();
-  const c = s.charges();
-  const vb = bucketExpr('v.began', period.step, s.offset);
-  const cb = bucketExpr('c.at', period.step, s.offset);
 
   const [curT, curM] = totals(s, period.start, period.end);
   const [prevT, prevM] = totals(s, prev.start, prev.end);
+  const [curV, curC] = seriesQueries(s, period.start, period.end);
+  const [prevV, prevC] = seriesQueries(s, prev.start, prev.end);
   const res = await db.batch([
     curT,
     curM,
@@ -76,29 +130,26 @@ export async function summary(s: Scope) {
     db
       .prepare('SELECT COUNT(DISTINCT uid) AS n FROM visits WHERE property_id = ?1 AND began > ?2 AND last_active > ?3')
       .bind(property.id, now - 6 * 3_600_000, now - 5 * 60_000),
-    db.prepare(`SELECT ${vb} AS k, COUNT(DISTINCT v.uid) AS visitors, SUM(v.views) AS views FROM visits v WHERE ${v.sql} GROUP BY k`).bind(...v.args),
-    db.prepare(`SELECT ${cb} AS k, SUM(c.amount_minor) AS revenue, SUM(c.kind = 'charge') AS payments FROM ${c.sql} GROUP BY k`).bind(...c.args),
+    curV,
+    curC,
+    prevV,
+    prevC,
   ]);
-  const [t1, m1, t0, m0, online, vs, cs] = res.map((r) => r.results as Row[]);
-
-  const vByKey = new Map(vs.map((r) => [r.k, r]));
-  const cByKey = new Map(cs.map((r) => [r.k, r]));
-  const series = bucketKeys(period, s.offset).map((k) => ({
-    key: k,
-    visitors: vByKey.get(k)?.visitors ?? 0,
-    views: vByKey.get(k)?.views ?? 0,
-    revenue: cByKey.get(k)?.revenue ?? 0,
-    payments: cByKey.get(k)?.payments ?? 0,
-  }));
+  const [t1, m1, t0, m0, online, vs, cs, pvs, pcs] = res.map((r) => r.results as Row[]);
+  const series = shapeSeries(bucketKeys(period, s.offset), vs, cs);
+  // The previous window has the same length, so its buckets line up with the current ones by position.
+  const previousSeries = shapeSeries(bucketKeys(prev, s.offset), pvs, pcs).slice(0, series.length);
 
   return {
     period,
+    previous: prev,
     currency: property.currency,
     digits: minorDigits(property.currency),
     now: shapeTotals(t1[0], m1[0]),
     before: shapeTotals(t0[0], m0[0]),
     online: online[0]?.n ?? 0,
     series,
+    previousSeries,
   };
 }
 

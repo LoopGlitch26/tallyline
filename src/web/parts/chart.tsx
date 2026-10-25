@@ -1,154 +1,166 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import type { Summary } from '../core/api';
-import { bucketText, num } from '../core/format';
+import { bucketText } from '../core/format';
 
-type Point = Summary['series'][number];
-
-/** Round an axis maximum up so quarter ticks are whole numbers (1, 2, 3, 4, 6, 8 x 10^n). */
-function niceCeil(v: number): number {
+/** Round an axis maximum up so quarter ticks land on readable numbers. */
+export function niceCeil(v: number): number {
   if (v <= 0) return 1;
   const exp = Math.pow(10, Math.floor(Math.log10(v)));
-  for (const m of [1, 2, 3, 4, 6, 8, 10]) if (m * exp >= v) return m * exp;
+  for (const m of [1, 1.2, 1.6, 2, 2.4, 3, 4, 5, 6, 8, 10]) if (m * exp >= v) return m * exp;
   return 10 * exp;
 }
 
-function smoothPath(pts: [number, number][]): string {
+function curve(pts: [number, number][]): string {
   if (!pts.length) return '';
-  if (pts.length === 1) return `M${pts[0][0]},${pts[0][1]}`;
   let d = `M${pts[0][0]},${pts[0][1]}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [x0, y0] = pts[i];
-    const [x1, y1] = pts[i + 1];
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1];
+    const [x1, y1] = pts[i];
     const mx = (x0 + x1) / 2;
     d += ` C${mx},${y0} ${mx},${y1} ${x1},${y1}`;
   }
   return d;
 }
 
-export function TrafficChart({
-  series,
-  step,
-  showVisitors,
-  showRevenue,
-  cash,
-}: {
-  series: Point[];
-  step: string;
-  showVisitors: boolean;
-  showRevenue: boolean;
-  cash: (minor: number, short?: boolean) => string;
-}) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(800);
-  const [hover, setHover] = useState<number | null>(null);
-  const height = 300;
-
+function useWidth(min = 280) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(800);
   useLayoutEffect(() => {
-    if (wrap.current) setWidth(wrap.current.clientWidth);
+    if (ref.current) setW(Math.max(min, ref.current.clientWidth));
   }, []);
   useEffect(() => {
-    if (!wrap.current || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(([e]) => setWidth(Math.max(280, e.contentRect.width)));
-    ro.observe(wrap.current);
+    if (!ref.current || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(min, e.contentRect.width)));
+    ro.observe(ref.current);
     return () => ro.disconnect();
   }, []);
+  return [ref, w] as const;
+}
 
-  const pad = { top: 16, right: showRevenue ? 58 : 14, bottom: 28, left: 44 };
+export interface ChartProps {
+  keys: string[];
+  previousKeys: string[];
+  current: number[];
+  previous: (number | undefined)[];
+  step: string;
+  compare: boolean;
+  format: (v: number, short?: boolean) => string;
+  label: string;
+  lowerIsBetter?: boolean;
+}
+
+/** Main trend chart: the selected metric, with the previous period as a dashed line. */
+export function TrendChart({ keys, previousKeys, current, previous, step, compare, format, label, lowerIsBetter }: ChartProps) {
+  const [wrap, width] = useWidth();
+  const [hover, setHover] = useState<number | null>(null);
+  const height = 300;
+  const pad = { top: 18, right: 16, bottom: 30, left: 58 };
   const w = width - pad.left - pad.right;
   const h = height - pad.top - pad.bottom;
-  const n = Math.max(1, series.length);
-  const slot = w / n;
+  const n = current.length;
+  const prevVals = previous.map((v) => v ?? 0);
+  const max = niceCeil(Math.max(...current, ...(compare ? prevVals : []), 0) * 1.08);
+  const x = (i: number) => pad.left + (n <= 1 ? w / 2 : (w * i) / (n - 1));
+  const y = (v: number) => pad.top + h - (Math.max(0, v) / max) * h;
 
-  const vMax = niceCeil(Math.max(...series.map((p) => p.visitors), 4));
-  // Give revenue extra headroom so its bars sit low, under the visitors line.
-  const rMax = niceCeil(Math.max(...series.map((p) => p.revenue), 1) * 1.6);
-  const xAt = (i: number) => pad.left + slot * i + slot / 2;
-  const yV = (v: number) => pad.top + h - (v / vMax) * h;
-  const yR = (v: number) => pad.top + h - (Math.max(0, v) / rMax) * h;
-
-  const line = series.map((p, i) => [xAt(i), yV(p.visitors)] as [number, number]);
-  const linePath = smoothPath(line);
-  const areaPath = line.length ? `${linePath} L${line[line.length - 1][0]},${pad.top + h} L${line[0][0]},${pad.top + h} Z` : '';
-
+  const cur = current.map((v, i) => [x(i), y(v)] as [number, number]);
+  const prev = previous.map((v, i) => (v === undefined ? null : ([x(i), y(v)] as [number, number]))).filter(Boolean) as [number, number][];
+  const line = curve(cur);
+  const area = cur.length ? `${line} L${cur[cur.length - 1][0]},${pad.top + h} L${cur[0][0]},${pad.top + h} Z` : '';
   const ticks = [0, 0.25, 0.5, 0.75, 1];
-  const labelEvery = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(w / 72))));
-  const barW = Math.min(30, Math.max(2, slot * 0.55));
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(w / 86))));
 
-  function onMove(e: MouseEvent) {
-    const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
-    const x = e.clientX - rect.left - pad.left;
-    const i = Math.floor(x / slot);
+  function move(e: MouseEvent) {
+    const r = (e.currentTarget as SVGElement).getBoundingClientRect();
+    const rel = e.clientX - r.left - pad.left;
+    const i = n <= 1 ? 0 : Math.round((rel / w) * (n - 1));
     setHover(i >= 0 && i < n ? i : null);
   }
 
-  const hp = hover !== null ? series[hover] : null;
-  const tipLeft = hover !== null ? Math.min(Math.max(xAt(hover) + 12, 8), width - 196) : 0;
+  const hv = hover !== null ? current[hover] : 0;
+  const hp = hover !== null ? previous[hover] : undefined;
+  const change = hp ? (hv - hp) / hp : null;
+  const good = change === null ? null : lowerIsBetter ? change <= 0 : change >= 0;
+  const tipX = hover !== null ? Math.min(Math.max(x(hover) + 14, 8), width - 214) : 0;
 
   return (
-    <div class="chart" ref={wrap}>
-      <svg width={width} height={height} onMouseMove={onMove} onMouseLeave={() => setHover(null)} role="img" aria-label="Visitors and revenue over time">
+    <div class="trend" ref={wrap}>
+      <svg width={width} height={height} onMouseMove={move} onMouseLeave={() => setHover(null)} role="img" aria-label={`${label} over time`}>
         <defs>
-          <linearGradient id="tl-area" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stop-color="var(--visitors)" stop-opacity="0.28" />
-            <stop offset="100%" stop-color="var(--visitors)" stop-opacity="0" />
+          <linearGradient id="trend-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22" />
+            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0" />
+          </linearGradient>
+          <linearGradient id="trend-stroke" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stop-color="var(--accent-deep)" />
+            <stop offset="55%" stop-color="var(--accent)" />
+            <stop offset="100%" stop-color="var(--accent-bright)" />
           </linearGradient>
         </defs>
         {ticks.map((t) => (
           <g>
-            <line x1={pad.left} x2={pad.left + w} y1={pad.top + h * (1 - t)} y2={pad.top + h * (1 - t)} class="grid" />
-            <text x={pad.left - 8} y={pad.top + h * (1 - t) + 4} class="axis" text-anchor="end">
-              {num(vMax * t)}
+            <line class="grid" x1={pad.left} x2={pad.left + w} y1={y(max * t)} y2={y(max * t)} />
+            <text class="axis" x={pad.left - 10} y={y(max * t) + 4} text-anchor="end">
+              {format(max * t, true)}
             </text>
-            {showRevenue && (
-              <text x={pad.left + w + 8} y={pad.top + h * (1 - t) + 4} class="axis">
-                {cash(rMax * t, true)}
-              </text>
-            )}
           </g>
         ))}
-        {series.map((p, i) =>
-          i % labelEvery === 0 ? (
-            <text x={xAt(i)} y={height - 8} class="axis" text-anchor="middle">
-              {bucketText(p.key, step)}
+        {keys.map((k, i) =>
+          i % every === 0 ? (
+            <text class="axis" x={x(i)} y={height - 9} text-anchor={i === 0 ? 'start' : 'middle'}>
+              {bucketText(k, step)}
             </text>
           ) : null,
         )}
-        {hover !== null && <rect x={pad.left + slot * hover} y={pad.top} width={slot} height={h} class="hover-band" />}
-        {showRevenue &&
-          series.map((p, i) =>
-            p.revenue > 0 ? <rect x={xAt(i) - barW / 2} y={yR(p.revenue)} width={barW} height={pad.top + h - yR(p.revenue)} rx={3} class="bar" /> : null,
-          )}
-        {showVisitors && (
-          <>
-            <path d={areaPath} fill="url(#tl-area)" />
-            <path d={linePath} class="line" />
-            {hover !== null && <circle cx={xAt(hover)} cy={yV(series[hover].visitors)} r={4.5} class="dot" />}
-          </>
+        {compare && prev.length > 1 && <path d={curve(prev)} class="prev-line" />}
+        <path d={area} fill="url(#trend-fill)" />
+        <path d={line} class="cur-line" />
+        {hover !== null && (
+          <g>
+            <line class="cursor" x1={x(hover)} x2={x(hover)} y1={pad.top} y2={pad.top + h} />
+            {compare && hp !== undefined && <circle class="prev-dot" cx={x(hover)} cy={y(hp)} r={3.5} />}
+            <circle class="cur-dot" cx={x(hover)} cy={y(hv)} r={5} />
+          </g>
         )}
       </svg>
-      {hp && (
-        <div class="tip" style={{ left: `${tipLeft}px`, top: '12px' }}>
-          <strong>{bucketText(hp.key, step, true)}</strong>
-          <div>
-            <i class="sw visitors" />
-            Visitors <b>{num(hp.visitors)}</b>
+      {hover !== null && (
+        <div class="trend-tip" style={{ left: `${tipX}px`, top: '8px' }}>
+          <div class="tip-row">
+            <i class="key cur" />
+            <span>{bucketText(keys[hover], step, true)}</span>
+            <b>{format(hv)}</b>
           </div>
-          <div>
-            <i class="sw views" />
-            Page views <b>{num(hp.views)}</b>
-          </div>
-          <div>
-            <i class="sw revenue" />
-            Revenue <b>{cash(hp.revenue)}</b>
-          </div>
-          {hp.payments > 0 && (
-            <div>
-              <i class="sw revenue soft" />
-              Payments <b>{hp.payments}</b>
+          {compare && previousKeys[hover] && (
+            <div class="tip-row muted">
+              <i class="key prev" />
+              <span>{bucketText(previousKeys[hover], step, true)}</span>
+              <b>{format(hp ?? 0)}</b>
+            </div>
+          )}
+          {compare && change !== null && Number.isFinite(change) && (
+            <div class={`tip-change ${good ? 'up' : 'down'}`}>
+              {change >= 0 ? '+' : ''}
+              {Math.round(change * 100)}% vs previous
             </div>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+/** Tiny trend line for metric tiles. */
+export function Sparkline({ values, width = 120, height = 34 }: { values: number[]; width?: number; height?: number }) {
+  if (values.length < 2) return <svg width={width} height={height} />;
+  const max = Math.max(...values, 1e-9);
+  const min = Math.min(...values, 0);
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * (width - 4) + 2, height - 3 - ((v - min) / (max - min || 1)) * (height - 8)] as [number, number]);
+  const d = curve(pts);
+  const last = pts[pts.length - 1];
+  return (
+    <svg class="spark" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <path d={`${d} L${last[0]},${height} L${pts[0][0]},${height} Z`} class="spark-fill" />
+      <path d={d} class="spark-line" />
+      <circle cx={last[0]} cy={last[1]} r={2.6} class="spark-dot" />
+    </svg>
   );
 }

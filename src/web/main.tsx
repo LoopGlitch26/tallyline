@@ -2,10 +2,10 @@ import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { call } from './core/api';
 import { usePath } from './core/nav';
-import { BoardView } from './views/board';
 import { LoginView } from './views/login';
 import { PropertiesView } from './views/properties';
-import { SetupView } from './views/setup';
+import { Workspace } from './views/workspace';
+import type { Section } from './core/board';
 import './style.css';
 
 function App() {
@@ -24,10 +24,8 @@ function App() {
   if (signedIn === null) return null;
   if (!signedIn) return <LoginView onDone={() => setSignedIn(true)} />;
 
-  const setup = /^\/p\/([\w-]+)\/setup\/?$/.exec(path);
-  if (setup) return <SetupView key={setup[1]} pid={setup[1]} />;
-  const board = /^\/p\/([\w-]+)\/?$/.exec(path);
-  if (board) return <BoardView key={board[1]} pid={board[1]} />;
+  const m = /^\/p\/([\w-]+)(?:\/(overview|acquisition|behavior|revenue|people|funnels|setup))?\/?$/.exec(path);
+  if (m) return <Workspace key={m[1]} pid={m[1]} section={(m[2] as Section) ?? 'overview'} />;
   return <PropertiesView />;
 }
 

@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { reportQuery, type Slice } from '../core/api';
-import { DIMENSION_NAMES, useBoard } from '../core/board';
+import { DIMENSION_NAMES, useBoard, type Section } from '../core/board';
 import { country, num, pct } from '../core/format';
 import { useFetch } from '../core/hooks';
+import { Glyph } from './glyphs';
 import { BrowserMark, ChannelMark, DeviceMark, Favicon, Flag, OsMark, SourceMark } from './icons';
 import { Dialog, Empty, Skeleton, Tabs } from './ui';
 
@@ -43,7 +44,11 @@ export function SliceLabel({ by, label, extra }: { by: string; label: string | n
       return <>{<Favicon domain={host} />}{t(label?.replace(/^https?:\/\/(www\.)?/, ''))}</>;
     }
     case 'goal':
-      return <>{<span class="glyph">◎</span>}{t(label)}</>;
+      return <>{<span class="glyph goal-dot">◆</span>}{t(label)}</>;
+    case 'page':
+    case 'landing':
+    case 'exit_page':
+      return <span class="ellipsis mono-path">{label ?? '(none)'}</span>;
     default:
       return t(label ?? <span class="muted">(none)</span>);
   }
@@ -51,123 +56,180 @@ export function SliceLabel({ by, label, extra }: { by: string; label: string | n
 
 type SortKey = 'visitors' | 'revenue';
 
-function Rows({ rows, by, sort, limit, onPick }: { rows: Slice[]; by: string; sort: SortKey; limit: number; onPick?: (s: Slice) => void }) {
+function useSlices(by: string) {
+  const { property, view, version } = useBoard();
+  return useFetch<Slice[]>(`/api/properties/${property.id}/breakdown?${reportQuery(view, { by })}`, version);
+}
+
+function sortSlices(rows: Slice[], sort: SortKey) {
+  return [...rows].sort((a, b) => b[sort] - a[sort] || b.visitors - a.visitors);
+}
+
+/** A table row with a soft bar behind the label showing its share. */
+function SliceRows({ rows, by, sort, onPick, countLabel }: { rows: Slice[]; by: string; sort: SortKey; onPick?: (s: Slice) => void; countLabel?: string }) {
   const { cash } = useBoard();
-  const ordered = useMemo(() => [...rows].sort((a, b) => b[sort] - a[sort] || b.visitors - a.visitors), [rows, sort]);
   const topV = Math.max(1, ...rows.map((r) => r.visitors));
   const topR = Math.max(1, ...rows.map((r) => r.revenue));
-  const earns = rows.some((r) => r.revenue > 0);
   return (
-    <ul class="rows">
-      {ordered.slice(0, limit).map((r) => {
-        // Visitors take the first ~65% of the row, revenue the rest, so both read at a glance.
-        const vw = (r.visitors / topV) * (earns ? 65 : 100);
-        const rw = earns ? (Math.max(0, r.revenue) / topR) * 35 : 0;
+    <tbody>
+      {rows.map((r) => {
+        const share = sort === 'revenue' ? Math.max(0, r.revenue) / topR : r.visitors / topV;
         return (
-          <li class={onPick ? 'pickable' : ''} onClick={() => onPick?.(r)} title={onPick ? 'Click to filter by this' : undefined}>
-            <span class="meter">
-              <span class="meter-v" style={{ width: `${vw}%` }} />
-              {rw > 0 && <span class="meter-r" style={{ width: `${rw}%` }} />}
-            </span>
-            <span class="row-label">
-              <SliceLabel by={by} label={r.label} extra={r.extra} />
-            </span>
-            <span class="row-value">
-              {r.revenue !== 0 && sort === 'visitors' && <span class="row-money">{cash(r.revenue, true)}</span>}
-              {sort === 'revenue' ? cash(r.revenue, true) : num(r.visitors)}
-            </span>
-            <span class="row-tip">
-              <b>{r.label ?? '(none)'}</b>
-              <span>Visitors</span>
-              <span>{num(r.visitors)}</span>
-              {r.count !== undefined && by === 'page' && (
-                <>
-                  <span>Views</span>
-                  <span>{num(r.count)}</span>
-                </>
-              )}
-              <span>Revenue</span>
-              <span>{cash(r.revenue)}</span>
-              <span>Customers</span>
-              <span>{r.customers}</span>
-              <span>Conversion</span>
-              <span>{r.visitors ? pct(r.customers / r.visitors) : '—'}</span>
-            </span>
-          </li>
+          <tr class={onPick ? 'clickable' : ''} onClick={() => onPick?.(r)} title={onPick ? 'Filter the dashboard by this' : undefined}>
+            <td class="cell-label">
+              <span class={`share ${sort}`} style={{ width: `${Math.max(1.5, share * 100)}%` }} />
+              <span class="label-in">
+                <SliceLabel by={by} label={r.label} extra={r.extra} />
+              </span>
+            </td>
+            {countLabel && <td class="num">{num(r.count ?? 0)}</td>}
+            <td class="num">{num(r.visitors)}</td>
+            <td class="num money-cell">{r.revenue ? cash(r.revenue, true) : <span class="dim">—</span>}</td>
+            <td class="num hide-sm">{r.visitors && r.customers ? pct(r.customers / r.visitors) : <span class="dim">—</span>}</td>
+          </tr>
         );
       })}
-    </ul>
+    </tbody>
   );
 }
 
-export function BreakdownCard({ dims }: { dims: string[] }) {
-  const { property, view, version, addFilter, cash } = useBoard();
+function Head({ first, sort, setSort, countLabel }: { first: string; sort: SortKey; setSort: (s: SortKey) => void; countLabel?: string }) {
+  return (
+    <thead>
+      <tr>
+        <th>{first}</th>
+        {countLabel && <th class="num">{countLabel}</th>}
+        <th class="num">
+          <button class={`th-sort${sort === 'visitors' ? ' on' : ''}`} onClick={() => setSort('visitors')}>
+            Visitors
+          </button>
+        </th>
+        <th class="num">
+          <button class={`th-sort${sort === 'revenue' ? ' on' : ''}`} onClick={() => setSort('revenue')}>
+            Revenue
+          </button>
+        </th>
+        <th class="num hide-sm">Conv.</th>
+      </tr>
+    </thead>
+  );
+}
+
+/**
+ * A card with tabs over several related dimensions, shown as a table.
+ * Clicking a row filters every view; "See all" opens the full list with search.
+ */
+export function SliceTable({
+  title,
+  dims,
+  limit = 8,
+  more,
+  countLabel,
+}: {
+  title: string;
+  dims: string[];
+  limit?: number;
+  more?: { section: Section; label: string };
+  countLabel?: (by: string) => string | undefined;
+}) {
+  const { addFilter, goSection } = useBoard();
   const [by, setBy] = useState(dims[0]);
   const [sort, setSort] = useState<SortKey>('visitors');
   const [full, setFull] = useState(false);
   const [query, setQuery] = useState('');
-  const { data, loading, error } = useFetch<Slice[]>(`/api/properties/${property.id}/breakdown?${reportQuery(view, { by })}`, version);
-  const filterable = !NOT_FILTERABLE.has(by);
-
-  const pick = filterable
-    ? (s: Slice) => {
+  const { data, error } = useSlices(by);
+  const rows = useMemo(() => sortSlices(data ?? [], sort), [data, sort]);
+  const pick = NOT_FILTERABLE.has(by)
+    ? undefined
+    : (s: Slice) => {
         setFull(false);
         addFilter(by, s.label ?? '');
-      }
-    : undefined;
-
-  const searched = (data ?? []).filter((r) => !query || (r.label ?? '').toLowerCase().includes(query.toLowerCase()));
+      };
+  const cl = countLabel?.(by);
+  const searched = rows.filter((r) => !query || (r.label ?? '').toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <section class="card breakdown">
-      <header class="card-head">
-        <Tabs value={by} options={dims.map((d) => ({ value: d, label: DIMENSION_NAMES[d] }))} onChange={setBy} />
-        <button class="sort" onClick={() => setSort((s) => (s === 'visitors' ? 'revenue' : 'visitors'))} title="Sort by visitors or revenue">
-          {sort === 'visitors' ? 'Visitors' : 'Revenue'} ⇅
-        </button>
+    <section class="panel">
+      <header class="panel-head">
+        <h3>{title}</h3>
+        {dims.length > 1 && <Tabs value={by} options={dims.map((d) => ({ value: d, label: DIMENSION_NAMES[d] }))} onChange={setBy} />}
       </header>
-      <div class={`card-body${loading && !data ? ' loading' : ''}`}>
-        {error && <p class="error">{error}</p>}
-        {!data && !error && <Skeleton height={380} />}
-        {data && data.length === 0 && <Empty>Nothing recorded in this period.</Empty>}
-        {data && data.length > 0 && <Rows rows={data} by={by} sort={sort} limit={10} onPick={pick} />}
-      </div>
-      {data && data.length > 10 && (
-        <button class="more" onClick={() => setFull(true)}>
-          View all {data.length}
-        </button>
+      {error && <p class="error pad">{error}</p>}
+      {!data && !error && <div class="pad"><Skeleton height={limit * 40} /></div>}
+      {data && data.length === 0 && <Empty>No {DIMENSION_NAMES[by].toLowerCase()} data in this period.</Empty>}
+      {data && data.length > 0 && (
+        <div class="table-scroll">
+          <table class="grid-table">
+            <Head first={DIMENSION_NAMES[by]} sort={sort} setSort={setSort} countLabel={cl} />
+            <SliceRows rows={rows.slice(0, limit)} by={by} sort={sort} onPick={pick} countLabel={cl} />
+          </table>
+        </div>
+      )}
+      {data && (data.length > limit || more) && (
+        <footer class="panel-foot">
+          {data.length > limit ? (
+            <button class="link-btn" onClick={() => setFull(true)}>
+              See all {data.length}
+            </button>
+          ) : (
+            <span />
+          )}
+          {more && (
+            <button class="link-btn" onClick={() => goSection(more.section)}>
+              {more.label} <Glyph name="arrow" size={14} />
+            </button>
+          )}
+        </footer>
       )}
       <Dialog open={full} onClose={() => setFull(false)} title={DIMENSION_NAMES[by]} wide>
-        <input class="field" placeholder="Search…" value={query} onInput={(e) => setQuery(e.currentTarget.value)} autoFocus />
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>{DIMENSION_NAMES[by]}</th>
-                <th class="r">Visitors</th>
-                <th class="r">Revenue</th>
-                <th class="r">Customers</th>
-                <th class="r">Conv.</th>
-                <th class="r">Rev / visitor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {searched.map((r) => (
-                <tr class={pick ? 'pickable' : ''} onClick={() => pick?.(r)}>
-                  <td class="label-cell">
-                    <SliceLabel by={by} label={r.label} extra={r.extra} />
-                  </td>
-                  <td class="r">{num(r.visitors)}</td>
-                  <td class="r">{cash(r.revenue)}</td>
-                  <td class="r">{r.customers}</td>
-                  <td class="r">{r.visitors ? pct(r.customers / r.visitors) : '—'}</td>
-                  <td class="r">{r.visitors ? cash(r.revenue / r.visitors) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
+        <label class="search-field">
+          <Glyph name="search" size={16} />
+          <input placeholder={`Search ${DIMENSION_NAMES[by].toLowerCase()}…`} value={query} onInput={(e) => setQuery(e.currentTarget.value)} autoFocus />
+        </label>
+        <div class="table-scroll">
+          <table class="grid-table">
+            <Head first={DIMENSION_NAMES[by]} sort={sort} setSort={setSort} countLabel={cl} />
+            <SliceRows rows={searched} by={by} sort={sort} onPick={pick} countLabel={cl} />
           </table>
         </div>
       </Dialog>
+    </section>
+  );
+}
+
+/** One horizontal bar split into segments (e.g. share of visitors per channel). */
+export function ShareBar({ by, title, value = 'visitors' }: { by: string; title: string; value?: SortKey }) {
+  const { cash, addFilter } = useBoard();
+  const { data } = useSlices(by);
+  if (!data) return <section class="panel pad"><Skeleton height={86} /></section>;
+  const rows = sortSlices(data, value).filter((r) => r[value] > 0);
+  const total = rows.reduce((s, r) => s + r[value], 0) || 1;
+  const top = rows.slice(0, 6);
+  const rest = rows.slice(6).reduce((s, r) => s + r[value], 0);
+  return (
+    <section class="panel share-panel">
+      <header class="panel-head">
+        <h3>{title}</h3>
+      </header>
+      <div class="pad">
+        <div class="sharebar">
+          {top.map((r, i) => (
+            <span class={`seg s${i}`} style={{ width: `${(r[value] / total) * 100}%` }} title={`${r.label}: ${value === 'revenue' ? cash(r[value]) : num(r[value])}`} />
+          ))}
+          {rest > 0 && <span class="seg rest" style={{ width: `${(rest / total) * 100}%` }} />}
+        </div>
+        <ul class="legend">
+          {top.map((r, i) => (
+            <li>
+              <button class="legend-item" onClick={() => addFilter(by, r.label ?? '')}>
+                <i class={`sw s${i}`} />
+                <span class="ellipsis">{r.label ?? '(none)'}</span>
+                <b>{pct(r[value] / total, 0)}</b>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

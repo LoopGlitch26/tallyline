@@ -19,7 +19,7 @@ export function PropertiesView() {
 
   return (
     <div class="page narrow">
-      <div class="topbar">
+      <div class="list-head">
         <Wordmark />
         <div class="row-actions">
           <button

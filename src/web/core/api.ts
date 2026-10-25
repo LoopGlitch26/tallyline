@@ -26,14 +26,28 @@ export interface Totals {
   revenuePerVisitor: number;
 }
 
+export interface Point {
+  key: string;
+  visitors: number;
+  views: number;
+  visits: number;
+  bounces: number;
+  engagedMs: number;
+  revenue: number;
+  payments: number;
+  customers: number;
+}
+
 export interface Summary {
   period: { start: number; end: number; step: Step };
+  previous: { start: number; end: number };
   currency: string;
   digits: number;
   now: Totals;
   before: Totals;
   online: number;
-  series: { key: string; visitors: number; views: number; revenue: number; payments: number }[];
+  series: Point[];
+  previousSeries: Point[];
 }
 
 export interface Slice {

@@ -4,8 +4,9 @@ import { call, type Property } from '../core/api';
 import { useCopy } from '../core/hooks';
 import { go } from '../core/nav';
 import { setupPrompt } from '../core/prompt';
-import { Favicon } from '../parts/icons';
-import { CodeBlock, Skeleton } from '../parts/ui';
+import { CodeBlock } from '../parts/ui';
+import { Shell } from '../parts/shell';
+import { useBoard } from '../core/board';
 
 function Block({ n, title, intro, children }: { n?: string; title: string; intro?: ComponentChildren; children: ComponentChildren }) {
   return (
@@ -20,19 +21,19 @@ function Block({ n, title, intro, children }: { n?: string; title: string; intro
   );
 }
 
-export function SetupView({ pid }: { pid: string }) {
-  const [p, setP] = useState<Property | null>(null);
-  const [form, setForm] = useState({ label: '', host: '', tz: '', currency: '' });
+export function SetupView() {
+  const board = useBoard();
+  const pid = board.property.id;
+  const [p, setP] = useState<Property>(board.property);
+  const [form, setForm] = useState({ label: p.label, host: p.host, tz: p.tz, currency: p.currency });
   const [secret, setSecret] = useState('');
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null);
+  const [deleting, setDeleting] = useState('');
   const origin = location.origin;
 
   useEffect(() => {
-    call<Property>(`/api/properties/${pid}`).then((x) => {
-      setP(x);
-      setForm({ label: x.label, host: x.host, tz: x.tz, currency: x.currency });
-    });
-  }, [pid]);
+    setP(board.property);
+  }, [board.property]);
 
   const flash = (text: string, bad = false) => {
     setToast({ text, bad });
@@ -43,27 +44,18 @@ export function SetupView({ pid }: { pid: string }) {
     try {
       setP(await call<Property>(`/api/properties/${pid}`, { method: 'PATCH', body: patch }));
       flash(ok);
+      board.refresh();
     } catch (e) {
       flash((e as Error).message, true);
     }
   }
 
-  if (!p) return <div class="page narrow"><Skeleton height={400} /></div>;
-
   const snippet = `<script defer data-site="${p.id}" src="${origin}/t.js"></script>`;
   const hook = `${origin}/api/hooks/dodo/${p.id}`;
 
   return (
-    <div class="page narrow stack-lg">
-      <div class="topbar">
-        <button class="btn" onClick={() => go(`/p/${p.id}`)}>
-          ← Dashboard
-        </button>
-        <div class="site-name">
-          <Favicon domain={p.host} size={20} /> <b>{p.label}</b>
-        </div>
-      </div>
-
+    <Shell title="Setup & settings" subtitle={`Install Tallyline on ${p.host}, connect payments and manage this website`} bare>
+      <div class="setup">
       <AiCard property={p} origin={origin} />
 
       <Block n="1" title="Add the tracker" intro={<>Put this in the <code>&lt;head&gt;</code> of every page on {p.host} and its subdomains.</>}>
@@ -205,20 +197,24 @@ const checkout = await dodo.checkoutSessions.create({
 
       <Block title="Delete website">
         <p class="muted">Removes the website and every visit, goal and payment recorded for it. This can't be undone.</p>
-        <button
-          class="btn danger"
-          onClick={async () => {
-            if (prompt(`Type ${p.host} to confirm`) !== p.host) return;
-            await call(`/api/properties/${p.id}`, { method: 'DELETE' });
-            go('/');
-          }}
-        >
-          Delete {p.host}
-        </button>
+        <div class="inline-form">
+          <input id="delete-confirm" class="field" placeholder={`Type ${p.host} to confirm`} value={deleting} onInput={(e) => setDeleting(e.currentTarget.value)} />
+          <button
+            class="btn danger"
+            disabled={deleting !== p.host}
+            onClick={async () => {
+              await call(`/api/properties/${p.id}`, { method: 'DELETE' });
+              go('/');
+            }}
+          >
+            Delete website
+          </button>
+        </div>
       </Block>
 
       {toast && <div class={`toast${toast.bad ? ' bad' : ''}`}>{toast.text}</div>}
-    </div>
+      </div>
+    </Shell>
   );
 }
 
@@ -227,7 +223,7 @@ function AiCard({ property, origin }: { property: Property; origin: string }) {
   const [show, setShow] = useState(false);
   const text = setupPrompt(property, origin);
   return (
-    <section class="card ai">
+    <section class="ai">
       <div class="ai-head">
         <div>
           <h2>Let your coding assistant set it up</h2>
@@ -250,20 +246,32 @@ function AiCard({ property, origin }: { property: Property; origin: string }) {
 }
 
 function ApiBlock({ property: p, origin, onRotated }: { property: Property; origin: string; onRotated: (key: string) => void }) {
+  const [armed, setArmed] = useState(false);
   return (
     <Block title="Other payment providers and server-side goals" intro="Send payments or goals from your backend with this website's API key.">
       <div class="inline-form">
-        <input class="field mono" readOnly value={p.secret_key} />
-        <button
-          class="btn"
-          onClick={async () => {
-            if (!confirm('Create a new API key? The current key stops working right away.')) return;
-            const r = await call<{ secret_key: string }>(`/api/properties/${p.id}/rotate-key`, { method: 'POST' });
-            onRotated(r.secret_key);
-          }}
-        >
-          New key
-        </button>
+        <input id="api-key" class="field mono" readOnly value={p.secret_key} />
+        {armed ? (
+          <>
+            <button
+              class="btn danger"
+              onClick={async () => {
+                const r = await call<{ secret_key: string }>(`/api/properties/${p.id}/rotate-key`, { method: 'POST' });
+                onRotated(r.secret_key);
+                setArmed(false);
+              }}
+            >
+              Replace key
+            </button>
+            <button class="btn ghost" onClick={() => setArmed(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button class="btn" onClick={() => setArmed(true)} title="The current key stops working right away">
+            New key
+          </button>
+        )}
       </div>
       <CodeBlock
         code={`# a payment (amount in major units; add "refund": true for refunds)
