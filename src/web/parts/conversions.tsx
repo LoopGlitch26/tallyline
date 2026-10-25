@@ -152,7 +152,7 @@ function Funnels() {
             <li>
               <div class="funnel-col">
                 <div class="funnel-fill" style={{ height: `${Math.max(2, share * 100)}%` }}>
-                  <span>{pct(share, 0)}</span>
+                  {share >= 0.15 && <span>{pct(share, 0)}</span>}
                 </div>
               </div>
               <div class="funnel-name" title={s.match}>
@@ -160,7 +160,9 @@ function Funnels() {
                 {s.kind === 'goal' ? '◎ ' : ''}
                 {s.match}
               </div>
-              <div class="muted">{num(s.people)} people</div>
+              <div class="muted">
+                {num(s.people)} people · {pct(share, 0)}
+              </div>
               {i > 0 && <div class="drop">{prev ? pct(1 - s.people / prev, 0) : '0%'} dropped</div>}
             </li>
           );

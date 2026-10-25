@@ -4,11 +4,11 @@ import { bucketText, num } from '../core/format';
 
 type Point = Summary['series'][number];
 
-/** Round an axis maximum up so quarter ticks are whole numbers (1, 2, 4, 6, 8 x 10^n). */
+/** Round an axis maximum up so quarter ticks are whole numbers (1, 2, 3, 4, 6, 8 x 10^n). */
 function niceCeil(v: number): number {
   if (v <= 0) return 1;
   const exp = Math.pow(10, Math.floor(Math.log10(v)));
-  for (const m of [1, 2, 4, 6, 8, 10]) if (m * exp >= v) return m * exp;
+  for (const m of [1, 2, 3, 4, 6, 8, 10]) if (m * exp >= v) return m * exp;
   return 10 * exp;
 }
 

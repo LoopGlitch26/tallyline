@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tallyline Live Demo</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="demo-bar">
+      <div class="demo-bar-inner">
+        <span class="demo-tag">Live demo</span>
+        <span class="demo-text">The real Tallyline server and dashboard, running in this tab with 60 days of sample data for a made-up app.</span>
+        <button id="sim" class="btn">Send a test visit</button>
+        <span id="sim-note" class="demo-note" aria-live="polite"></span>
+      </div>
+    </div>
+    <div id="boot">
+      <div class="boot-card">
+        <div class="boot-spin"></div>
+        <p id="boot-status">Loading…</p>
+      </div>
+    </div>
+    <div id="app"></div>
+    <script type="module" src="./boot.ts"></script>
+  </body>
+</html>

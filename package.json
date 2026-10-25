@@ -15,15 +15,19 @@
     "migrate:remote": "wrangler d1 migrations apply tallyline --remote",
     "deploy": "vite build && wrangler d1 migrations apply tallyline --remote && wrangler deploy",
     "demo-data": "node scripts/demo-data.mjs && wrangler d1 execute tallyline --local --file .wrangler/demo.sql",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "demo": "vite build -c vite.demo.config.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261025.1",
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^26.6.5",
+    "@types/sql.js": "^1.4.11",
     "preact": "^11.0.2",
+    "sql.js": "^1.15.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^5.0.5",
     "wrangler": "^4.152.0"
   }

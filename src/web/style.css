@@ -21,7 +21,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --paper: #0f1214;
     --card: #171b1e;
     --ink: #edf0f2;
@@ -38,6 +38,23 @@
     --shadow: none;
     color-scheme: dark;
   }
+}
+:root[data-theme='dark'] {
+  --paper: #0f1214;
+  --card: #171b1e;
+  --ink: #edf0f2;
+  --ink-2: #b2bac1;
+  --ink-3: #78828b;
+  --line: #262c31;
+  --line-2: #1e2327;
+  --hover: #1f2428;
+  --visitors: #2dd4bf;
+  --visitors-soft: #133d39;
+  --revenue: #f5b13a;
+  --revenue-soft: #45351a;
+  --code-bg: #0b0d0e;
+  --shadow: none;
+  color-scheme: dark;
 }
 
 * {
@@ -81,7 +98,9 @@ hr {
 .page {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 28px 24px 48px;
+  padding-block: 28px 48px;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -124,12 +143,18 @@ hr {
 }
 @media (max-width: 980px) {
   .grid-2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+.grid-2 > *,
+.page > * {
+  min-width: 0;
 }
 @media (max-width: 600px) {
   .page {
-    padding: 16px 16px 40px;
+    padding-block: 16px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
   .two {
     grid-template-columns: 1fr;
@@ -487,6 +512,8 @@ hr {
 }
 .tabs {
   display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
   gap: 2px;
   overflow-x: auto;
   scrollbar-width: none;
