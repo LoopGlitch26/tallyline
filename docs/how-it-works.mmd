@@ -1,0 +1,6 @@
+flowchart LR
+  A["Your website<br/>t.js tracker (4 KB)"] -- "page views, goals,<br/>outbound clicks" --> W["Tallyline Worker<br/>(Cloudflare)"]
+  P["Dodo Payments<br/>or any provider"] -- "signed webhook /<br/>payments API" --> W
+  W --> D[("D1 database<br/>(SQLite)")]
+  D --> UI["Dashboard"]
+  W -. "matches each payment<br/>to the visit that earned it" .-> D

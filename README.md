@@ -91,14 +91,12 @@ Tallyline connects each payment to the visit that earned it, so every source, ca
 
 ## How it works
 
-```mermaid
-flowchart LR
-  A["Your website<br/>t.js tracker (4 KB)"] -- "page views, goals,<br/>outbound clicks" --> W["Tallyline Worker<br/>(Cloudflare)"]
-  P["Dodo Payments<br/>or any provider"] -- "signed webhook /<br/>payments API" --> W
-  W --> D[("D1 database<br/>(SQLite)")]
-  D --> UI["Dashboard"]
-  W -. "matches each payment<br/>to the visit that earned it" .-> D
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/how-it-works-dark.svg">
+  <img src="docs/how-it-works-light.svg" width="100%" alt="Your website's t.js tracker sends page views, goals and outbound clicks to the Tallyline Worker on Cloudflare; Dodo Payments or any provider sends payments by signed webhook or the payments API. The Worker stores both in a D1 database, matches each payment to the visit that earned it, and the dashboard reads from D1.">
+</picture>
+
+<!-- Diagram source: docs/how-it-works.mmd (rendered to the two SVGs with mermaid-cli, htmlLabels off) -->
 
 1. The tracker sets two first-party cookies: `tl_uid` (the browser) and `tl_vsn` (the current visit, 30 minutes of inactivity ends it).
 2. Each visit records where it came from: referrer, UTM tags, `?ref=`, location and device.
